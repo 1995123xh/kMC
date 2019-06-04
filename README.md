@@ -2,7 +2,7 @@
 A kinetic Monte-Carlo model for predicting isotopic structures of small organic molecules in catagensis
 
 ### Prerequisite
-Install Matlab version > R2015b. Select 'parellel computing toolbox' package when prompt during installation.
+Install Matlab. Version needs to be newer than R2015b. Select 'parellel computing toolbox' package when prompt during installation.
 
 ### Input
 Every input (e.g. 'kIA.mat') is a binary data file that contains two types of datas:
