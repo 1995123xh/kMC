@@ -2,10 +2,10 @@
 %%% kerogen molecules
 %%%
 clear all
-Filename='kIA.mat'
+Filename='butane.mat'
 
 nmol=1;         %number of molecules in the graph. 1000-2000 atoms have highest efficiency
-sz=1000;         %number of graphs in the cluster
+sz=300;         %number of graphs in the cluster
 enrichfactor=50; %the factor of deuterium concentration
 enrichfactor_13C=5;
 crkratio=0.2;    %fraction of bonds going broken
@@ -196,7 +196,7 @@ methane_n_log=zeros(sims,1);
 
 hnumber=4-deg_mega0;
 dabundance=hnumber.*F0.*(1-F0).^(hnumber-1); % fixed a bug of no exponent
-parpool()
+
 tic
 disp('Starts Monte-Carlo...')
 for sim=1:sims
