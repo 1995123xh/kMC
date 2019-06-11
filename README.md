@@ -15,5 +15,11 @@ Every input (e.g. 'kIA.mat') is a binary data file that contains two types of da
 ### Run
 To run, change the input file name in 'MC_isotopologue_seperategraphs_multibin_newcollector.m' and execute it.
 
+### Data processing
+Process the saved results file with:
+```bash
+parseoutput(FILENAME)
+```
+
 ### Contact
 hxie@caltech.edu
