@@ -2,15 +2,15 @@
 %%% kerogen molecules
 %%%
 clear all
-Filename='butane.mat'
+Filename='EFK_50A_80.mat'
 
 nmol=1;         %number of molecules in the graph. 1000-2000 atoms have highest efficiency
-sz=300;         %number of graphs in the cluster
+sz=1;         %number of graphs in the cluster
 enrichfactor=50; %the factor of deuterium concentration
 enrichfactor_13C=5;
 crkratio=0.2;    %fraction of bonds going broken
 sims=150;        %number of MC simulations
-rep=168;       %number of reps in the parfor loop
+rep=28;       %number of reps in the parfor loop
 
 disp('loading...')
 load(Filename)
@@ -221,7 +221,7 @@ for sim=1:sims
         Dmarker=randomarray<dabundance;
         randomarray=rand(size(hnumber));
         Cmarker=randomarray<F0_13C;
-        Cmarker(atoms~='C')=0;
+        Cmarker(:,atoms~='C')=0;                   % 2019-06-15 fixed the error of wrong indexing here
         %calculating rate
         [Dgraph,Dindex]=find(Dmarker==1);  %the graph and the index of the deuterium
         [Cgraph,Cindex]=find(Cmarker==1);  %the graph and the index of the deuterium
