@@ -11,9 +11,10 @@ parpool()
 Every input (e.g. 'kIA.mat') is a binary data file that contains two types of datas:
 1. 'atoms' is a character array of all the atoms in the molecule.
 2. 'BoM' that is the bond order matrix showing the bondings between atoms. If there is a double bond between atom#6 and atom#7, BoM(6,7)==BoM(7,6)==2. 1.5 is used for aromatic bonds. Note that this matrix has to be complete instead of an upper triangle. 
+3. 'ringinfo' is an array that describes the smallest memeber of rings each atom is in.
 
 ### Run
-To run, change the input file name in 'MC_isotopologue_seperategraphs_multibin_newcollector.m' and execute it.
+To run, change the input file name in 'MC_isotopologue_seperategraphs_multibin_newcollector.m' and execute it. Results will be automatically saved.
 
 ### Data processing
 Process the saved results file with:
