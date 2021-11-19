@@ -1,5 +1,5 @@
 # kMC
-A kinetic Monte-Carlo model for predicting isotopic structures of small organic molecules in catagensis, presented in two papers:           \ <em>
+A kinetic Monte-Carlo model for predicting isotopic structures of small organic molecules in catagensis, presented in two papers:         &nbsp; <em>
 Xie, H., Ponton, C., Formolo, M. J., Lawson, M., Ellis, G. S., Lewan, M. D., ... & Eiler, J. M. (2020). Position-specific distribution of hydrogen isotopes in natural propane: Effects of thermal cracking, equilibration and biodegradation. Geochimica et Cosmochimica Acta, 290, 235-256.</em>  
 <em>Xie, H., Formolo, M. J., & Eiler, J. M. (2022). Position-specific distribution of hydrogen isotopes in natural propane: Effects of thermal cracking, equilibration and biodegradation. Submitted to Geochimica et Cosmochimica Acta, 290, 235-256.</em>  
 Two versions of the model are stored in different folders, for each reference respectively. 
