@@ -5,7 +5,7 @@ Xie, H., Ponton, C., Formolo, M. J., Lawson, M., Ellis, G. S., Lewan, M. D., ...
 Two versions of the model are stored in different folders, for each reference respectively. 
 
 ### Prerequisite
-Install Matlab. Version needs to be newer than R2015b. Add the 'parellel computing toolbox' package when prompt during installation. You can type the following Matlab command to check if your installation has it:
+Install Matlab. Version needs to be newer than R2015b. Add the 'parellel computing toolbox' package when prompted during installation. You can type the following Matlab command to check if your installation has it:
 ```bash
 parpool()
 ```
