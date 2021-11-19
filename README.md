@@ -1,5 +1,6 @@
 # kMC
-A kinetic Monte-Carlo model for predicting isotopic structures of small organic molecules in catagensis
+A kinetic Monte-Carlo model for predicting isotopic structures of small organic molecules in catagensis. Presented in two papers: 
+Xie, H., Ponton, C., Formolo, M. J., Lawson, M., Ellis, G. S., Lewan, M. D., ... & Eiler, J. M. (2020). Position-specific distribution of hydrogen isotopes in natural propane: Effects of thermal cracking, equilibration and biodegradation. Geochimica et Cosmochimica Acta, 290, 235-256.
 
 ### Prerequisite
 Install Matlab. Version needs to be newer than R2015b. Add the 'parellel computing toolbox' package when prompt during installation. You can type the following Matlab command to check if your installation has it:
