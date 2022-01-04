@@ -3,23 +3,24 @@
 %%% kerogen molecules
 %%%
 clear all
-Filename='MarK_50A_100_clean';
+Filename='kIA';
 
 disp('loading...')
 load(Filename)
 
-nmol=200;         %number of molecules in the graph. 1000-2000 atoms have highest efficiency
+nmol=1000;         %number of molecules in the graph. 1000-2000 atoms have highest efficiency
 sz=1;         %number of graphs in the cluster
 enrichfactor=50; %the factor of deuterium concentration
 enrichfactor_13C=5;
-crkratio=1;    %fraction of bonds going broken
-stopat=100;      %percentage of completion
-sims=1;        %number of MC simulations
+crkratio=100;    %fraction of bonds going broken
+stopat=0.2;      %percentage of completion
+sims=10;        %number of MC simulations
 rep=1;       %number of reps in the parfor loop
-updatestepsize=500;  %step size for refreshing the reaction rates due to temeprature change and increasing capping D. If you don't wish to temperature(e.g. for computing efficiency), use a very large number here)
+updatestepsize=100;  %step size (HomoC+BetaC+Termination) for refreshing the reaction rates due to temeprature change and structural change.
+CapIso=30; %maximum isomerization step number
+LowN=10; %minimum isomerization step number
 
-
-ThermalProgram=[0 0.2 0.5 0.7 1; [250 250 250 250 250]+273.5];  % A thermal program where first row is fraction to completion and second row is temeprature
+ThermalProgram=[0 0.2 0.5 0.7 1; 673 673 673 673 673];  % A thermal program where first row is fraction to completion and second row is temeprature
 inittemp=ThermalProgram(2,1);
 stopat=stopat/100;
 
@@ -44,7 +45,9 @@ BoM=sparse(RowI,ColumnI, Ele);
 BoG=graph(BoM, 'upper','omitselfloops');    %Construct a graph of bond orders
 BoG0=BoG;           %the original molecule
 
-ConnM=zeros(length(atoms),4);  %connection matrix: n*4 matrix, where each row is an atom and each column is a neighbor atom
+ConnM=zeros(length(atoms),4);  %connection matrix: n*4 matrix, where each row is an atom and each column is a neighbor atom;...
+%Note that this is a full-loop (not upper triangle), a bond shows
+%up twice in the matrix
 BondM=ConnM;                   %bonding matrix: n*4 matrix, where each row is an atom and each column is the bond weight
 NodesList=BoG.Edges.EndNodes;
 EdgeWeights=BoG.Edges.Weight;
@@ -123,7 +126,8 @@ cnoutiso_C=zeros(sims,length(cnout),8+1);
 
 
 %% Constants
-R0=155.76e-6*enrichfactor;
+R0=155.76e-6*(1-100/1000)*enrichfactor;
+R0_CAP=155.76e-6*(1-20/1000)*enrichfactor;   %water-sourced
 R0_13C=0.01118*enrichfactor_13C;
 F0=R0/(R0+1);
 F0_13C=R0_13C/(R0_13C+1);
@@ -164,13 +168,15 @@ dabundance=hnumber.*F0.*(1-F0).^(hnumber-1); % fixed a bug of no exponent
 tic
 % BoG_mega0=parallel.pool.Constant(BoG_mega0);
 disp('Starts Monte-Carlo...');
+propaneN=[];
+timeM=zeros(sims, rep);
 for sim=1:sims
     cnoutisotemp_D=cell(rep,1);   %pre-allocate these counters
     cnoutisotemp_C=cell(rep,1);
-    %      mypool=gcp;
-    %      addAttachedFiles(mypool,{'getRateMatrix.m','kinPara.m'})
-    %     ticBytes(gcp);
-    timeM=zeros(sims, rep); 
+    %           mypool=gcp;
+    %           addAttachedFiles(mypool,{'getRateMatrix.m','kinPara.m'})
+    %          ticBytes(gcp);
+    
     for iteration=1:rep
         %random number shuffler
         rng('shuffle');
@@ -221,39 +227,44 @@ for sim=1:sims
         totalbonds=length(singlebonds);
         homostep=updatestepsize;
         isostep=0;
-        isotreshold=fix(rand()*6)+1;
+        isotreshold=randi([LowN, CapIso])+1;
         for step=1:round(totalbonds*crkratio*stopat) % core loop for reactions
             
             T=interp1(ThermalProgramPar(1,:), ThermalProgramPar(2,:), step/totalbonds/crkratio);
             %[radicalG,radicalI]=find(radical>0);    %locate the radicals
             
-            [BetaSciList, BetaSciRate, CapRate, TerminationList, TerminationRate]=getRadicalReactions_bondM(ConnM, BondM, radicalI, Cmarker, Dmarker, molmass, atomorder, T);
+            [BetaSciList, BetaSciRate, CapRate, CapRate_w, TerminationList, TerminationRate]=getRadicalReactions_bondM_BSKIEonly(ConnM, BondM, radicalI, Cmarker, Dmarker, molmass, atomorder, T);
             cumBetaSciRate=cumsum(BetaSciRate);
             cumCapRate=cumsum(CapRate);
+            cumCapRate_w=cumsum(CapRate_w);
             cumTerminationRate=cumsum(TerminationRate);
-            
             
             if isostep==isotreshold
                 Isomerate=0;
                 isostep=0;
-                isotreshold=fix(rand()*5)+1;
+                isotreshold=randi([LowN, CapIso])+1;
             else
                 [IsomeList, Isomerate]=getIsoRates_bondM(ConnM, BondM, radicalI, T);
             end
             
             if homostep==updatestepsize         %when counter meets treshold, update homolytic cleavage rates
                 
-                %               [predic, KIE, KIE_13C]=kinPara(T);  %update kinetics based on temperature
+                %  [predic, KIE, KIE_13C]=kinPara(T);  %update kinetics based on temperature
                 [rate_mega, singlebonds]=getRateMatrix_bondM(ConnM, BondM, Dmarker, Cmarker,atomorder, T);
-                %                 rate_mega(rate_mega~=0)=new_rate_mega(rate_mega~=0);
+                %  rate_mega(rate_mega~=0)=new_rate_mega(rate_mega~=0);
                 sumrate=sum(sum(rate_mega));
                 cumrate=cumsum(rate_mega(:)); % Generate a cumulative sum of rates
                 homostep=1;
+                
             end
             
-            sumrate_total=sumrate+sum(BetaSciRate)+sum(TerminationRate)+sum(CapRate)+sum(Isomerate);
+            sumrate_total=sumrate+sum(BetaSciRate)+sum(TerminationRate)+sum(CapRate)+sum(CapRate_w)+sum(Isomerate);
+            if sumrate_total==0
+                disp('No Reaction Found');
+                break
+            end
             dice=rand()*sumrate_total;   %selection: 4 types of reactions
-            timeM(sim, iteration)=timeM(sim,iteration)+1/sumrate_total;
+            timeM(sim, iteration)=timeM(sim,iteration)+1/sumrate_total*log(1/rand());
             if dice<sumrate              %homolytic cleavage
                 dice=dice*sumrate/sumrate_total;
                 i = find(cumrate > dice,1);
@@ -271,7 +282,6 @@ for sim=1:sims
                     %                     radical(g,A2)=radical(g,A2)+1;
                     
                     radicalI=[radicalI, A1, A2];
-                    
                     rate_mega(g, index)=0;         %clean that from the rate calculations
                     BondM(A1, ConnM(A1,:)==A2)=0;
                     BondM(A2, ConnM(A2,:)==A1)=0;
@@ -327,56 +337,58 @@ for sim=1:sims
                 %   BoG_mega{1}=addedge(BoG_mega{1}, TerminationList(i,2),TerminationList(i,4),1);
                 disp(['Termination' ,' ', num2str(TerminationList(i,2)),' ', num2str(TerminationList(i,4))]);
                 homostep=homostep+1;
-            elseif dice<sumrate+sum(BetaSciRate)+sum(TerminationRate)+sum(CapRate)
+            elseif dice<sumrate+sum(BetaSciRate)+sum(TerminationRate)+sum(CapRate)  %capping with organic hydrogen
                 dice=(dice-sumrate-sum(BetaSciRate)-sum(TerminationRate)); %capping
                 i = find(cumCapRate > dice,1);
                 %   radical(radicalG(i),radicalI(i))=radical(radicalG(i),radicalI(i))-1;
                 rIi=radicalI(i);
                 
-                TransferDice=randi(length(atomorder)*2);   %determine the transfer reaction (where H comes from)
+                TransferDice=randi(length(atomorder));   %determine the transfer reaction (where H comes from)
                 
-                if TransferDice<length(atomorder)+1
-                    Hatoms=4-sum(BondM(TransferDice,:));
-                    if sum(radicalI==TransferDice)==0 && Hatoms>0  %which means that H comes from another carbon
-                        if Dmarker(TransferDice)
-                            newdice=rand();
-                            if newdice<(Hatoms-1+1/aH)/Hatoms    %the last bracket does nothing in order to account for hydrogen isotope KIE
-                                radicalI(i)=[];
-                                radicalI=[radicalI, TransferDice];
-                                isostep=isostep+1;
-                                homostep=homostep+1;
-                                %H migration
-                                if newdice>(Hatoms-1)/(Hatoms)
-                                    Dmarker(rIi)=1;%D migration
-                                    Dmarker(TransferDice)=0;
-                                end
-                            end
-                        else    %protium transfer
+                Hatoms=4-sum(BondM(TransferDice,:));
+                if sum(radicalI==TransferDice)==0 && Hatoms>0
+                    if Dmarker(TransferDice)
+                        newdice=rand();
+                        if newdice<(Hatoms-1+1/aH)/Hatoms    %the last bracket does nothing in order to account for hydrogen isotope KIE
                             radicalI(i)=[];
                             radicalI=[radicalI, TransferDice];
+                            % homostep=homostep+1;
+                            %H migration
+                            if newdice>(Hatoms-1)/(Hatoms)
+                                Dmarker(rIi)=1;%D migration
+                                Dmarker(TransferDice)=0;
+                            end
                         end
-                    end
-                else      %capping
-                    radicalI(i)=[];
-                    homostep=homostep+1;
-                    newdice=rand();
-                    if newdice<R0/aH/(R0/aH+1)
-                        Dmarker(rIi)=1;
+                    else    %protium transfer
+                        radicalI(i)=[];
+                        radicalI=[radicalI, TransferDice];
                     end
                 end
+                
                 disp(['Capping' ,' ', num2str(rIi)]);
+            elseif dice<sumrate+sum(BetaSciRate)+sum(TerminationRate)+sum(CapRate)+sum(CapRate_w) %capping with H from water
+                dice=dice-sumrate-sum(BetaSciRate)-sum(TerminationRate)-sum(CapRate); %capping
+                i = find(cumCapRate_w > dice,1);
+                rIi=radicalI(i);
+                radicalI(i)=[];
+                % homostep=homostep+1;
+                newdice=rand();
+                if newdice<R0_CAP/aH/(R0_CAP/aH+1)
+                    Dmarker(rIi)=1;
+                end
+                disp(['Capping_w' ,' ', num2str(rIi)]);
             else
-                dice=dice-sumrate-sum(BetaSciRate)-sum(TerminationRate)-sum(CapRate);
+                dice=dice-sumrate-sum(BetaSciRate)-sum(TerminationRate)-sum(CapRate)-sum(CapRate_w);
                 i=find(cumsum(Isomerate)>dice,1);
-                %                 radical(1,IsomeList(i,1))=radical(1,IsomeList(i,1))-1;
-                %                 radical(1,IsomeList(i,3))=radical(1,IsomeList(i,3))+1;
+                % radical(1,IsomeList(i,1))=radical(1,IsomeList(i,1))-1;
+                % radical(1,IsomeList(i,3))=radical(1,IsomeList(i,3))+1;
                 if Dmarker(IsomeList(i,3))
                     Hatoms=4-sum(BondM(IsomeList(i,3),:));  %number of H atoms
                     newdice=rand();
                     if newdice<(Hatoms-1+1/aH)/Hatoms    %the last bracket does nothing in order to account for hydrogen isotope KIE
                         radicalI(radicalI==IsomeList(i,1))=[];
                         radicalI=[radicalI, IsomeList(i,3)];
-                        homostep=homostep+1;
+                        % homostep=homostep+1;
                         isostep=isostep+1;
                         %H migration
                         if newdice>(Hatoms-1)/(Hatoms)
@@ -387,11 +399,11 @@ for sim=1:sims
                 else
                     radicalI(radicalI==IsomeList(i,1))=[];
                     radicalI=[radicalI, IsomeList(i,3)];
-                    homostep=homostep+1;
+                    %homostep=homostep+1;
                     isostep=isostep+1;
                 end
                 
-                %               disp(['Radical isomerization',' ', num2str(IsomeList(i,1)), ' ',num2str(IsomeList(i,3))])
+                %              disp(['Radical isomerization',' ', num2str(IsomeList(i,1)), ' ',num2str(IsomeList(i,3))])
                 
             end
         end
@@ -460,6 +472,9 @@ for sim=1:sims
                             splitg_i.Nodes.DLabel=double(Dlabel');
                             splitg_i.Nodes.CLabel=double(Clabel');
                             if isisomorphic(cnoutorder(cn).BoG,splitg_i, 'EdgeVariables','Weight')
+                                if cn==1
+                                    propaneN=[propaneN; pnodes];
+                                end
                                 for isotopomer=1:size(cnoutorder(cn).label,1)
                                     if isequal(cnoutorder(cn).label(isotopomer,:),Dlabel)
                                         cnoutiso_Dpar(cn,isotopomer)=cnoutiso_Dpar(cn,isotopomer)+1;
@@ -561,8 +576,8 @@ for sim=1:sims
     end
 end
 
-save(strcat('result_Beta_',datestr(date,'yyyy-mm-dd'),'_',Filename,'_',num2str(stopat*100)))
-
+save(strcat('result_Beta_BSKIEonly_',datestr(date,'yyyy-mm-dd'),'_',Filename,'_',num2str(stopat*100),'_',num2str(ThermalProgram(2,1))));
+beep
 
 
 
