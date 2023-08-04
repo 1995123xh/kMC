@@ -274,17 +274,17 @@ for sim=1:sims
         
         %Count hydrocarbons
         %         tables=cell(sz,1);
-        for g=1:sz
+        for g0=1:sz
             %             tables{g}=BoG_mega{g}.Edges;
-            splitg=conncomp(BoG_mega{g},'OutputForm','cell'); %decompose eachgraph into sepearte parts
-            for i=1:length(splitg)
-                if length(splitg{i})<9          %ignore larger fragments
-                    splitg_i=subgraph(BoG_mega{g},splitg{i});   %construct a seperate graph
-                    if length(splitg{i})==2  %Find the ethanes
-                        pnodes=splitg{i};
+            splitg=conncomp(BoG_mega{g0},'OutputForm','cell'); %decompose eachgraph into sepearte parts
+            for i1=1:length(splitg)
+                if length(splitg{i1})<9          %ignore larger fragments
+                    splitg_i=subgraph(BoG_mega{g0},splitg{i1});   %construct a seperate graph
+                    if length(splitg{i1})==2  %Find the ethanes
+                        pnodes=splitg{i1};
                         if atomorder(pnodes)=='CC'
                             if sgbmatrix(pnodes(1), pnodes(2))~=0 %single C-C bonds
-                                Dlabel=[(Dmarker(g, pnodes(1))), (Dmarker(g, pnodes(2)))];
+                                Dlabel=[(Dmarker(g0, pnodes(1))), (Dmarker(g0, pnodes(2)))];
                                 if or(isequal(Dlabel, [1, 0]), isequal(Dlabel,[0, 1]))
                                     ethane_D1=ethane_D1+1;
                                 elseif isequal(Dlabel, [1, 1])
@@ -292,7 +292,7 @@ for sim=1:sims
                                 else
                                     ethane_Dn=ethane_Dn+1;
                                 end
-                                Clabel=[Cmarker(g, pnodes(1)), Cmarker(g, pnodes(2))];
+                                Clabel=[Cmarker(g0, pnodes(1)), Cmarker(g0, pnodes(2))];
                                 if or(isequal(Clabel, [1, 0]), isequal(Clabel,[0, 1]))
                                     ethane_13C1=ethane_13C1+1;
                                 elseif isequal(Clabel, [1, 1])
@@ -302,8 +302,8 @@ for sim=1:sims
                                 end
                             end
                         end
-                    elseif length(splitg{i})==1  %Find the methanes
-                        pnodes=splitg{i};
+                    elseif length(splitg{i1})==1  %Find the methanes
+                        pnodes=splitg{i1};
                         if atomorder(pnodes)=='C'
                             methaneN=[methaneN;pnodes];
                             Dlabel=Dmarker(g, pnodes);
@@ -321,8 +321,8 @@ for sim=1:sims
                             end
                         end
                     else               %creating output for C3+ straight chain n alkanes
-                        cn=length(splitg{i})-2;   %
-                        pnodes=splitg{i};                           %
+                        cn=length(splitg{i1})-2;   %
+                        pnodes=splitg{i1};                           %
                         if all(atomorder(pnodes)=='C')                   %no hetero atoms
                             Dlabel=[Dmarker(g, pnodes)];
                             Clabel=[Cmarker(g, pnodes)];
@@ -432,7 +432,6 @@ end
 
 save(strcat('result_',datestr(date,'yyyy-mm-dd'),'_',Filename,'_',num2str(stopat*100)))
 
-%% Calculate kinetic parameters based on RMG and KIEs based on Tang 2005
 
 
 
