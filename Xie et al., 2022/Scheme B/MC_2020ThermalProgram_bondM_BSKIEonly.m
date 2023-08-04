@@ -3,24 +3,24 @@
 %%% kerogen molecules
 %%%
 clear all
-Filename='kIA';
+Filename='EMS';
 
 disp('loading...')
 load(Filename)
 
-nmol=1000;         %number of molecules in the graph. 1000-2000 atoms have highest efficiency
+nmol=50000;         %number of molecules in the graph. 1000-2000 atoms have highest efficiency
 sz=1;         %number of graphs in the cluster
 enrichfactor=50; %the factor of deuterium concentration
 enrichfactor_13C=5;
 crkratio=100;    %fraction of bonds going broken
-stopat=0.2;      %percentage of completion
-sims=10;        %number of MC simulations
-rep=1;       %number of reps in the parfor loop
+stopat=0.5;      %percentage of completion
+sims=500;        %number of MC simulations
+rep=128;       %number of reps in the parfor loop
 updatestepsize=100;  %step size (HomoC+BetaC+Termination) for refreshing the reaction rates due to temeprature change and structural change.
 CapIso=30; %maximum isomerization step number
 LowN=10; %minimum isomerization step number
 
-ThermalProgram=[0 0.2 0.5 0.7 1; 673 673 673 673 673];  % A thermal program where first row is fraction to completion and second row is temeprature
+ThermalProgram=[0 0.2 0.5 0.7 1; 500 500 500 500 500];  % A thermal program where first row is fraction to completion and second row is temeprature
 inittemp=ThermalProgram(2,1);
 stopat=stopat/100;
 
@@ -169,7 +169,7 @@ tic
 % BoG_mega0=parallel.pool.Constant(BoG_mega0);
 disp('Starts Monte-Carlo...');
 propaneN=[];
-timeM=zeros(sims, rep);
+% timeM=zeros(sims, rep); for calculating time
 for sim=1:sims
     cnoutisotemp_D=cell(rep,1);   %pre-allocate these counters
     cnoutisotemp_C=cell(rep,1);
@@ -177,7 +177,7 @@ for sim=1:sims
     %           addAttachedFiles(mypool,{'getRateMatrix.m','kinPara.m'})
     %          ticBytes(gcp);
     
-    for iteration=1:rep
+    parfor iteration=1:rep
         %random number shuffler
         rng('shuffle');
         %data transfer
@@ -260,11 +260,11 @@ for sim=1:sims
             
             sumrate_total=sumrate+sum(BetaSciRate)+sum(TerminationRate)+sum(CapRate)+sum(CapRate_w)+sum(Isomerate);
             if sumrate_total==0
-                disp('No Reaction Found');
+                % disp('No Reaction Found');
                 break
             end
             dice=rand()*sumrate_total;   %selection: 4 types of reactions
-            timeM(sim, iteration)=timeM(sim,iteration)+1/sumrate_total*log(1/rand());
+            %timeM(sim, iteration)=timeM(sim,iteration)+1/sumrate_total*log(1/rand());
             if dice<sumrate              %homolytic cleavage
                 dice=dice*sumrate/sumrate_total;
                 i = find(cumrate > dice,1);
@@ -288,7 +288,7 @@ for sim=1:sims
                     ConnM(A1, ConnM(A1,:)==A2)=0;
                     ConnM(A2, ConnM(A2,:)==A1)=0;
                     %                     BoG_mega{g}=rmedge(BoG_mega{g}, A1,A2);
-                    disp(['homocleavage' ,' ', num2str(A1),' ', num2str(A2)]);
+                    % disp(['homocleavage' ,' ', num2str(A1),' ', num2str(A2)]);
                     homostep=homostep+1;
                 end
             elseif dice<sumrate+sum(BetaSciRate)   %beta Scission
@@ -315,7 +315,7 @@ for sim=1:sims
                 %                 BoG_mega{BetaSciList(i,1)}.Edges.Weight(newDouble)=2;
                 BondM(B2, ConnM(B2,:)==B3)=2;
                 BondM(B3, ConnM(B3,:)==B2)=2;
-                disp(['betaSci' ,' ', num2str(BetaSciList(i,3)),' ', num2str(BetaSciList(i,4))]);
+                % disp(['betaSci' ,' ', num2str(BetaSciList(i,3)),' ', num2str(BetaSciList(i,4))]);
                 homostep=homostep+1;
             elseif dice<sumrate+sum(BetaSciRate)+sum(TerminationRate) %termination
                 dice=dice-sumrate-sum(BetaSciRate);
@@ -335,7 +335,7 @@ for sim=1:sims
                 ConnM(T2, T2numc)=T4;
                 ConnM(T4, T4numc)=T2;
                 %   BoG_mega{1}=addedge(BoG_mega{1}, TerminationList(i,2),TerminationList(i,4),1);
-                disp(['Termination' ,' ', num2str(TerminationList(i,2)),' ', num2str(TerminationList(i,4))]);
+                % disp(['Termination' ,' ', num2str(TerminationList(i,2)),' ', num2str(TerminationList(i,4))]);
                 homostep=homostep+1;
             elseif dice<sumrate+sum(BetaSciRate)+sum(TerminationRate)+sum(CapRate)  %capping with organic hydrogen
                 dice=(dice-sumrate-sum(BetaSciRate)-sum(TerminationRate)); %capping
@@ -365,7 +365,7 @@ for sim=1:sims
                     end
                 end
                 
-                disp(['Capping' ,' ', num2str(rIi)]);
+                % disp(['Capping' ,' ', num2str(rIi)]);
             elseif dice<sumrate+sum(BetaSciRate)+sum(TerminationRate)+sum(CapRate)+sum(CapRate_w) %capping with H from water
                 dice=dice-sumrate-sum(BetaSciRate)-sum(TerminationRate)-sum(CapRate); %capping
                 i = find(cumCapRate_w > dice,1);
@@ -376,7 +376,7 @@ for sim=1:sims
                 if newdice<R0_CAP/aH/(R0_CAP/aH+1)
                     Dmarker(rIi)=1;
                 end
-                disp(['Capping_w' ,' ', num2str(rIi)]);
+                % disp(['Capping_w' ,' ', num2str(rIi)]);
             else
                 dice=dice-sumrate-sum(BetaSciRate)-sum(TerminationRate)-sum(CapRate)-sum(CapRate_w);
                 i=find(cumsum(Isomerate)>dice,1);
@@ -411,23 +411,23 @@ for sim=1:sims
         %         tables=cell(sz,1);
         [beginN, numc]=find(BondM~=0);
         endN=beginN;
-        for i=1:length(endN)
-            endN(i)=ConnM(beginN(i), numc(i));
+        for i0=1:length(endN)
+            endN(i0)=ConnM(beginN(i0), numc(i0));
         end
         edgeweights=BondM(BondM~=0);
         BoM_end=sparse(beginN, endN, edgeweights);
         BoG_mega{1}=graph(BoM_end, 'upper', "omitselfloops");
         
-        for g=1:sz
+        for g0=1:sz
             %             tables{g}=BoG_mega{g}.Edges;
-            splitg=conncomp(BoG_mega{g},'OutputForm','cell'); %decompose eachgraph into sepearte parts
-            for i=1:length(splitg)
-                if length(splitg{i})<9          %ignore larger fragments
-                    if length(splitg{i})==2  %Find the ethanes
-                        pnodes=splitg{i};
+            splitg=conncomp(BoG_mega{g0},'OutputForm','cell'); %decompose eachgraph into sepearte parts
+            for i1=1:length(splitg)
+                if length(splitg{i1})<9          %ignore larger fragments
+                    if length(splitg{i1})==2  %Find the ethanes
+                        pnodes=splitg{i1};
                         if atomorder(pnodes)=='CC'
                             if BoM_end(pnodes(1), pnodes(2))==1 %single C-C bonds
-                                Dlabel=[(Dmarker(g, pnodes(1))), (Dmarker(g, pnodes(2)))];
+                                Dlabel=[(Dmarker(g0, pnodes(1))), (Dmarker(g0, pnodes(2)))];
                                 if or(isequal(Dlabel, [1, 0]), isequal(Dlabel,[0, 1]))
                                     ethane_D1=ethane_D1+1;
                                 elseif isequal(Dlabel, [1, 1])
@@ -435,7 +435,7 @@ for sim=1:sims
                                 else
                                     ethane_Dn=ethane_Dn+1;
                                 end
-                                Clabel=[Cmarker(g, pnodes(1)), Cmarker(g, pnodes(2))];
+                                Clabel=[Cmarker(g0, pnodes(1)), Cmarker(g0, pnodes(2))];
                                 if or(isequal(Clabel, [1, 0]), isequal(Clabel,[0, 1]))
                                     ethane_13C1=ethane_13C1+1;
                                 elseif isequal(Clabel, [1, 1])
@@ -445,11 +445,11 @@ for sim=1:sims
                                 end
                             end
                         end
-                    elseif length(splitg{i})==1  %Find the methanes
-                        pnodes=splitg{i};
+                    elseif length(splitg{i1})==1  %Find the methanes
+                        pnodes=splitg{i1};
                         if atomorder(pnodes)=='C'
-                            Dlabel=Dmarker(g, pnodes);
-                            Clabel=Cmarker(g, pnodes);
+                            Dlabel=Dmarker(g0, pnodes);
+                            Clabel=Cmarker(g0, pnodes);
                             if Dlabel
                                 methane_D=methane_D+1;
                                 if Clabel
@@ -463,12 +463,12 @@ for sim=1:sims
                             end
                         end
                     else               %creating output for C3+ straight chain n alkanes
-                        cn=length(splitg{i})-2;   %
-                        pnodes=splitg{i};                           %
+                        cn=length(splitg{i1})-2;   %
+                        pnodes=splitg{i1};                           %
                         if all(atomorder(pnodes)=='C')                   %no hetero atoms
-                            splitg_i=subgraph(BoG_mega{g},splitg{i});   %construct a seperate graph
-                            Dlabel=[Dmarker(g, pnodes)];
-                            Clabel=[Cmarker(g, pnodes)];
+                            splitg_i=subgraph(BoG_mega{g0},splitg{i1});   %construct a seperate graph
+                            Dlabel=[Dmarker(g0, pnodes)];
+                            Clabel=[Cmarker(g0, pnodes)];
                             splitg_i.Nodes.DLabel=double(Dlabel');
                             splitg_i.Nodes.CLabel=double(Clabel');
                             if isisomorphic(cnoutorder(cn).BoG,splitg_i, 'EdgeVariables','Weight')
@@ -576,7 +576,7 @@ for sim=1:sims
     end
 end
 
-save(strcat('result_Beta_BSKIEonly_',datestr(date,'yyyy-mm-dd'),'_',Filename,'_',num2str(stopat*100),'_',num2str(ThermalProgram(2,1))));
+save(strcat('2022results\','result_Beta_BSKIEonly_',datestr(date,'yyyy-mm-dd'),'_',Filename,'_',num2str(stopat*100),'_',num2str(ThermalProgram(2,1))));
 beep
 
 
