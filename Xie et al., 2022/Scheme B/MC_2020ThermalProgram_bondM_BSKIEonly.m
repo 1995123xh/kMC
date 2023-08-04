@@ -3,19 +3,19 @@
 %%% kerogen molecules
 %%%
 clear all
-Filename='EMS';
+Filename='oil';
 
 disp('loading...')
 load(Filename)
 
-nmol=50000;         %number of molecules in the graph. 1000-2000 atoms have highest efficiency
+nmol=100;         %number of molecules in the graph. 1000-2000 atoms have highest efficiency
 sz=1;         %number of graphs in the cluster
 enrichfactor=50; %the factor of deuterium concentration
 enrichfactor_13C=5;
 crkratio=100;    %fraction of bonds going broken
 stopat=0.5;      %percentage of completion
 sims=500;        %number of MC simulations
-rep=128;       %number of reps in the parfor loop
+rep=8;       %number of reps in the parfor loop
 updatestepsize=100;  %step size (HomoC+BetaC+Termination) for refreshing the reaction rates due to temeprature change and structural change.
 CapIso=30; %maximum isomerization step number
 LowN=10; %minimum isomerization step number
